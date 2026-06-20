@@ -66,10 +66,10 @@ function splitMdChapters(content: string, bookTitle: string): Chapter[] {
         id: crypto.randomUUID(),
         title: currentTitle,
         order: order++,
-        startPage: startPage,
+        startPage: startPage + 1,
         content: marked.parse(currentLines.join('\n')) as string,
-        pageStart: startPage,
-        pageEnd: pageEnd,
+        pageStart: startPage + 1,
+        pageEnd: pageEnd + 1,
       });
     }
   };
@@ -99,10 +99,10 @@ function splitMdChapters(content: string, bookTitle: string): Chapter[] {
       id: crypto.randomUUID(),
       title: bookTitle || '正文',
       order: 0,
-      startPage: 0,
+      startPage: 1,
       content: marked.parse(content) as string,
-      pageStart: 0,
-      pageEnd: lines.length - 1,
+      pageStart: 1,
+      pageEnd: lines.length,
     });
   }
 

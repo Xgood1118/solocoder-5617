@@ -8,8 +8,9 @@ import { SearchPanel } from './SearchPanel';
 type SidebarTab = 'toc' | 'bookmarks' | 'notes' | 'search';
 
 export const Sidebar: React.FC = () => {
-  const { sidebarOpen, toggleSidebar } = useReaderStore();
-  const [activeTab, setActiveTab] = useState<SidebarTab>('toc');
+  const { sidebarOpen, toggleSidebar, activeSidebarTab, setActiveSidebarTab } = useReaderStore();
+  const activeTab: SidebarTab = activeSidebarTab;
+  const setActiveTab = (tab: SidebarTab) => setActiveSidebarTab(tab);
   const [collapsed, setCollapsed] = useState(false);
 
   const tabs: { key: SidebarTab; label: string; icon: string }[] = [

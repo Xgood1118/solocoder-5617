@@ -34,7 +34,9 @@ export async function parseMobi(
   const cover = extractCover(dataView, pdbHeader, mobiHeader);
   const chaptersWithPage = chapters.map((c, idx) => ({
     ...c,
-    startPage: idx,
+    startPage: idx + 1,
+    pageStart: idx + 1,
+    pageEnd: idx + 1,
   }));
 
   const now = Date.now();
@@ -397,8 +399,10 @@ function splitMobiChapters(htmlContent: string, bookTitle: string): Chapter[] {
         id: crypto.randomUUID(),
         title: currentTitle,
         order: order++,
-        startPage: pageCounter,
+        startPage: pageCounter + 1,
         content: currentContent,
+        pageStart: pageCounter + 1,
+        pageEnd: pageCounter + 1,
       });
       pageCounter++;
     }
@@ -432,8 +436,10 @@ function splitMobiChapters(htmlContent: string, bookTitle: string): Chapter[] {
       id: crypto.randomUUID(),
       title: bookTitle || '正文',
       order: 0,
-      startPage: 0,
+      startPage: 1,
       content: body.innerHTML,
+      pageStart: 1,
+      pageEnd: 1,
     });
   }
 

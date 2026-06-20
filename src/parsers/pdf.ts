@@ -109,8 +109,8 @@ function groupPagesIntoChapters(
       chapters.push({
         title: currentTitle,
         pages: [...currentPages],
-        pageStart,
-        pageEnd,
+        pageStart: pageStart + 1,
+        pageEnd: pageEnd + 1,
       });
     }
   };
@@ -138,8 +138,8 @@ function groupPagesIntoChapters(
     chapters.push({
       title: bookTitle || '正文',
       pages: pageTexts,
-      pageStart: 0,
-      pageEnd: pageTexts.length - 1,
+      pageStart: 1,
+      pageEnd: pageTexts.length,
     });
   }
 
@@ -189,7 +189,7 @@ function buildChapterHtml(
   let html = '<div class="pdf-chapter">';
 
   for (let i = 0; i < pages.length; i++) {
-    const pageNum = pageStart + i + 1;
+    const pageNum = pageStart + i;
     const pageContent = escapeHtml(pages[i])
       .replace(/\n{2,}/g, '</p><p class="pdf-paragraph">')
       .replace(/\n/g, '<br/>');

@@ -54,7 +54,8 @@ export async function parseEpub(
   const chapters = await parseSpine(zip, spine, manifest, opfDir, tocHref);
   const chaptersWithPage = chapters.map((c, idx) => ({
     ...c,
-    startPage: idx,
+    startPage: idx + 1,
+    pageEnd: idx + 1,
   }));
 
   const now = Date.now();
@@ -180,14 +181,14 @@ async function parseSpine(
     if (!content) continue;
 
     const chapterTitle = extractChapterTitle(content, item.href);
-    const chapterContent = processHtmlContent(content, zip, opfDir);
+    const chapterContent = await processHtmlContent(content, zip, opfDir);
 
     chapters.push({
       id: crypto.randomUUID(),
       title: chapterTitle,
       href: item.href,
       order: order++,
-      startPage: order - 1,
+      startPage: 0,
       content: chapterContent,
     });
   }
@@ -217,34 +218,39 @@ function extractChapterTitle(html: string, fallback: string): string {
   return fallback.split('/').pop() || fallback;
 }
 
-function processHtmlContent(html: string, zip: JSZip, opfDir: string): string {
+async function processHtmlContent(html: string, zip: JSZip, opfDir: string): Promise<string> {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
 
   const body = doc.body || doc.documentElement;
 
-  const images = body.querySelectorAll('img');
-  images.forEach(async (img) => {
+  const images = Array.from(body.querySelectorAll('img'));
+  for (const img of images) {
     const src = img.getAttribute('src');
-    if (src && !src.startsWith('data:') && !src.startsWith('http')) {
-      const fullSrc = opfDir ? resolvePath(opfDir, src) : src;
-      const imgFile = zip.file(fullSrc);
-      if (imgFile) {
-        const ext = fullSrc.split('.').pop()?.toLowerCase() || '';
-        const mimeTypes: Record<string, string> = {
-          jpg: 'image/jpeg',
-          jpeg: 'image/jpeg',
-          png: 'image/png',
-          gif: 'image/gif',
-          webp: 'image/webp',
-          svg: 'image/svg+xml',
-        };
-        const mimeType = mimeTypes[ext] || 'image/png';
-        const base64 = await imgFile.async('base64');
+    if (!src || src.startsWith('data:') || src.startsWith('http')) continue;
+    const fullSrc = opfDir ? resolvePath(opfDir, src) : src;
+    const imgFile = zip.file(fullSrc);
+    if (!imgFile) continue;
+    try {
+      const ext = fullSrc.split('.').pop()?.toLowerCase() || '';
+      const mimeTypes: Record<string, string> = {
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+        gif: 'image/gif',
+        webp: 'image/webp',
+        svg: 'image/svg+xml',
+        bmp: 'image/bmp',
+      };
+      const mimeType = mimeTypes[ext] || 'image/png';
+      const base64 = await imgFile.async('base64');
+      if (base64) {
         img.setAttribute('src', `data:${mimeType};base64,${base64}`);
       }
+    } catch (e) {
+      console.warn('Failed to embed image:', fullSrc, e);
     }
-  });
+  }
 
   return body.innerHTML;
 }

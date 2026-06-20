@@ -69,7 +69,7 @@ const fontFamilyMap: Record<string, string> = {
 };
 
 export const Reader: React.FC = () => {
-  const { books, currentBookId } = useBookStore();
+  const { books, currentBookId, updateProgress } = useBookStore();
   const { settings, currentPage, totalPages, nextPage, prevPage, setPage, tocOpen, notesOpen, settingsOpen, sidebarOpen } = useReaderStore();
   const { notes, selection, toolbarVisible, clearSelection, setSelection, showToolbar } = useNoteStore();
 
@@ -77,11 +77,25 @@ export const Reader: React.FC = () => {
   const touchStartX = useRef<number>(0);
   const touchStartY = useRef<number>(0);
   const [animationClass, setAnimationClass] = useState<string>('');
+  const { resetPageForBook, loadBookNotes, loadBookBookmarks } = {
+    resetPageForBook: useReaderStore((s) => s.resetPageForBook),
+    loadBookNotes: useNoteStore((s) => s.loadBookNotes),
+    loadBookBookmarks: useNoteStore((s) => s.loadBookBookmarks),
+  };
 
   const currentBook = useMemo<Book | undefined>(
     () => books.find((b) => b.id === currentBookId),
     [books, currentBookId]
   );
+
+  useEffect(() => {
+    if (!currentBook || !currentBookId) return;
+    const savedPage = currentBook.progress?.page;
+    const tp = currentBook.totalPages || currentBook.chapters.length;
+    resetPageForBook(tp, savedPage);
+    loadBookNotes(currentBookId);
+    loadBookBookmarks(currentBookId);
+  }, [currentBook, currentBookId, resetPageForBook, loadBookNotes, loadBookBookmarks]);
 
   const currentChapter = useMemo<Chapter | undefined>(() => {
     if (!currentBook) return undefined;
@@ -94,6 +108,20 @@ export const Reader: React.FC = () => {
     if (totalPages <= 0) return 0;
     return Math.round((currentPage / totalPages) * 100);
   }, [currentPage, totalPages]);
+
+  useEffect(() => {
+    if (!currentBookId || totalPages <= 0 || currentPage <= 0) return;
+    const timer = window.setTimeout(() => {
+      void updateProgress(
+        currentBookId,
+        currentChapter?.id || null,
+        currentPage,
+        currentPage,
+        totalPages
+      );
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [currentBookId, currentPage, totalPages, currentChapter, updateProgress]);
 
   const pageNotes = useMemo(() => {
     if (!currentBookId) return [];

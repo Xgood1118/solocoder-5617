@@ -15,6 +15,7 @@ export const Toolbar: React.FC = () => {
     toggleSettings,
     toggleBookmarks,
     toggleNotes,
+    openSidebarAndTab,
   } = useReaderStore();
   const { bookmarks, createBookmark, deleteBookmark } = useNoteStore();
   const [showMore, setShowMore] = useState(false);
@@ -127,7 +128,7 @@ export const Toolbar: React.FC = () => {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', position: 'relative' }}>
-        <button style={buttonStyle} onClick={toggleToc} title="搜索">
+        <button style={buttonStyle} onClick={() => openSidebarAndTab('search')} title="搜索">
           🔍
         </button>
         <button style={buttonStyle} onClick={toggleSettings} title="设置">

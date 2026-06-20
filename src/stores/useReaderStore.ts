@@ -3,6 +3,8 @@ import { db } from '../db';
 import type { ReaderSettings } from '../types';
 import { useBookStore } from './useBookStore';
 
+type SidebarTab = 'toc' | 'bookmarks' | 'notes' | 'search';
+
 const DEFAULT_SETTINGS: ReaderSettings = {
   theme: 'light',
   fontFamily: 'serif',
@@ -21,6 +23,7 @@ const DEFAULT_SETTINGS: ReaderSettings = {
 interface ReaderStore {
   settings: ReaderSettings;
   sidebarOpen: boolean;
+  activeSidebarTab: SidebarTab;
   tocOpen: boolean;
   settingsOpen: boolean;
   bookmarksOpen: boolean;
@@ -31,11 +34,15 @@ interface ReaderStore {
   loadSettings: () => Promise<void>;
   updateSettings: (partial: Partial<ReaderSettings>) => Promise<void>;
   toggleSidebar: () => void;
+  setActiveSidebarTab: (tab: SidebarTab) => void;
+  openSidebarAndTab: (tab: SidebarTab) => void;
   toggleToc: () => void;
   toggleSettings: () => void;
   toggleBookmarks: () => void;
   toggleNotes: () => void;
   setPage: (page: number) => void;
+  setTotalPages: (total: number) => void;
+  resetPageForBook: (totalPages: number, savedPage?: number) => void;
   nextPage: () => void;
   prevPage: () => void;
   goToChapter: (chapterId: string) => void;
@@ -44,6 +51,7 @@ interface ReaderStore {
 export const useReaderStore = create<ReaderStore>((set, get) => ({
   settings: DEFAULT_SETTINGS,
   sidebarOpen: false,
+  activeSidebarTab: 'toc',
   tocOpen: false,
   settingsOpen: false,
   bookmarksOpen: false,
@@ -54,11 +62,10 @@ export const useReaderStore = create<ReaderStore>((set, get) => ({
   async loadSettings() {
     try {
       const saved = await db.getSettings();
-      if (saved) {
-        set({ settings: { ...DEFAULT_SETTINGS, ...saved } });
-      }
+      set({ settings: { ...DEFAULT_SETTINGS, ...(saved || {}) } });
     } catch (error) {
-      console.error('Failed to load settings:', error);
+      console.warn('Failed to load settings from IndexedDB, using defaults:', error);
+      set({ settings: { ...DEFAULT_SETTINGS } });
     }
   },
 
@@ -67,7 +74,7 @@ export const useReaderStore = create<ReaderStore>((set, get) => ({
     try {
       await db.saveSettings(newSettings);
     } catch (error) {
-      console.error('Failed to save settings:', error);
+      console.warn('Failed to save settings to IndexedDB:', error);
     }
     set({ settings: newSettings });
   },
@@ -76,8 +83,20 @@ export const useReaderStore = create<ReaderStore>((set, get) => ({
     set(state => ({ sidebarOpen: !state.sidebarOpen }));
   },
 
+  setActiveSidebarTab(tab: SidebarTab) {
+    set({ activeSidebarTab: tab });
+  },
+
+  openSidebarAndTab(tab: SidebarTab) {
+    set({ sidebarOpen: true, activeSidebarTab: tab });
+  },
+
   toggleToc() {
-    set(state => ({ tocOpen: !state.tocOpen }));
+    const state = get();
+    set({
+      sidebarOpen: !state.sidebarOpen || state.activeSidebarTab !== 'toc',
+      activeSidebarTab: 'toc',
+    });
   },
 
   toggleSettings() {
@@ -85,17 +104,39 @@ export const useReaderStore = create<ReaderStore>((set, get) => ({
   },
 
   toggleBookmarks() {
-    set(state => ({ bookmarksOpen: !state.bookmarksOpen }));
+    const state = get();
+    set({
+      sidebarOpen: !state.sidebarOpen || state.activeSidebarTab !== 'bookmarks',
+      activeSidebarTab: 'bookmarks',
+    });
   },
 
   toggleNotes() {
-    set(state => ({ notesOpen: !state.notesOpen }));
+    const state = get();
+    set({
+      sidebarOpen: !state.sidebarOpen || state.activeSidebarTab !== 'notes',
+      activeSidebarTab: 'notes',
+    });
   },
 
   setPage(page: number) {
     const { totalPages } = get();
     const clampedPage = Math.max(1, Math.min(page, Math.max(1, totalPages)));
     set({ currentPage: clampedPage });
+  },
+
+  setTotalPages(total: number) {
+    const t = Math.max(0, Math.floor(total));
+    set(state => ({
+      totalPages: t,
+      currentPage: Math.max(1, Math.min(state.currentPage, Math.max(1, t))),
+    }));
+  },
+
+  resetPageForBook(totalPages: number, savedPage?: number) {
+    const t = Math.max(1, Math.floor(totalPages));
+    const p = savedPage && savedPage >= 1 && savedPage <= t ? savedPage : 1;
+    set({ totalPages: t, currentPage: p });
   },
 
   nextPage() {
@@ -119,7 +160,7 @@ export const useReaderStore = create<ReaderStore>((set, get) => ({
     if (!book) return;
     const chapter = book.chapters.find(c => c.id === chapterId);
     if (chapter) {
-      set({ currentPage: chapter.startPage });
+      set({ currentPage: Math.max(1, chapter.startPage) });
     }
   },
 }));
