@@ -1,0 +1,62 @@
+做一个电子书阅读器的前端，技术栈 React + Vite。个人阅读器，导入 epub/mobi/pdf/txt/markdown 格式文件阅读。
+
+文件导入：
+- 拖拽文件到页面
+- 按钮选择文件
+- URL 导入（输入网络上的电子书 URL）
+- 文件大小限制（默认 100MB）
+
+格式解析：
+- epub：解压 ZIP，解析 container.xml、OPF 文件、NCX/NAV 目录，提取章节 HTML
+- mobi：解析 PDB 头、MOBI 头、HTML 内容
+- pdf：用 pdf.js 渲染
+- txt：纯文本
+- md：Markdown 转 HTML
+- 解析完所有内容存 IndexedDB（避免重复解析）
+
+阅读界面：
+- 单页模式（左右翻页）
+- 滚动模式（长页面）
+- 翻页动画（仿真书页翻转/滑动）
+- 进度显示（页码 / 总页数 + 百分比）
+- 目录侧边栏（点击跳章节）
+- 书签（当前位置加书签，书签列表）
+- 笔记（选中文本后弹出工具栏：高亮/添加笔记/复制/搜索/翻译）
+- 笔记显示在文本旁边（margin notes）
+- 笔记可以隐藏/显示
+
+阅读设置：
+- 字体大小（小/中/大/特大）
+- 字体类型（衬线/无衬线/宋体/思源黑体/等宽）
+- 行间距（紧凑/标准/宽松）
+- 段间距
+- 主题：白底黑字、米黄底深棕字、黑底浅字、深蓝底浅字
+- 屏幕亮度（用 CSS filter brightness 实现）
+- 翻页方式：点击屏幕左边/右边翻页、滑动翻页、键盘左右键
+
+进度：
+- 每本书记录最近阅读位置
+- 阅读时长（开了多久）
+- 阅读进度条
+- 同步进度到多设备（用浏览器同步 API 或者 mock 云端）
+
+搜索：
+- 整本书搜索
+- 搜索结果显示章节、上下文、高亮
+- 跳到匹配位置
+
+图书馆：
+- 多本书管理
+- 书籍列表显示封面、标题、作者、阅读进度
+- 分类（已读/在读/想读）
+- 标签自定义
+- 评分
+
+导入导出：
+- 笔记导出（Markdown 格式：书名 + 章节 + 引用文本 + 我的笔记）
+- 书架导出（JSON 备份）
+- 笔记导入（从其他设备）
+
+代码组织：src/components（Reader、Toolbar、Sidebar、Toc、NotePanel、Library、BookCard）、src/parsers（epub、mobi、pdf、txt、md 各自一个）、src/stores（useBookStore、useReaderStore、useNoteStore）、src/utils（epub 解析、PDF 渲染、搜索）、src/db（IndexedDB 封装）、src/types。
+
+依赖：react、react-dom、jszip（epub 解压）、epubjs（epub 解析）、pdfjs-dist、marked、turndown（HTML 转 MD）、zustand、idb-keyval。≤ 10 个。

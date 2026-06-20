@@ -1,0 +1,39 @@
+## 任务
+修复 5617-react-vite-ebook 电子书阅读器的 4 个 Bug。
+
+## Bug 1：Reader 工具栏搜索按钮无响应
+
+**现象**：在阅读界面点击工具栏上的 🔍 按钮（title="搜索"）无任何反应。
+
+**原因**：`Toolbar.tsx` 中 🔍 按钮调用 `toggleToc()`（第 130 行），该函数将 `tocOpen` 状态取反。但 `Reader.tsx` 组件从未检查 `tocOpen` 状态——搜索功能只存在于 `Sidebar.tsx` 中（`SearchPanel`），而 Sidebar 仅由 `sidebarOpen` + `toggleSidebar()` 控制（对应 ☰ 按钮 "目录"）。
+
+**修复要求**：让 🔍 按钮直接打开 Sidebar 并切换到 "搜索"（'search'）标签页。有两种方案：
+(A) 在 `useReaderStore` 新增一个 `searchOpen` 状态，Reader 在 `searchOpen` 时显示 Sidebar 并传入 activeTab='search'。
+(B) 让 🔍 按钮调用 `toggleSidebar()` 并在 store 中预设 `sidebarActiveTab`，使 Sidebar 打开后默认显示搜索面板。
+
+## Bug 2：NotePanel「新建笔记」始终标记为第 1 页
+
+**现象**：在阅读器中打开笔记面板，点击「+ 新建笔记」创建的笔记，所有笔记的 `page` 字段均为 1。
+
+**原因**：`NotePanel.tsx` 第 60-70 行的 `handleCreateNote()` 中 `page: 1` 被硬编码。没有从 `useReaderStore` 获取当前 `currentPage`。
+
+**修复要求**：`handleCreateNote` 应该从 `useReaderStore` 获取 `currentPage`，而非硬编码 `page: 1`。
+
+## Bug 3：首次加载 IndexedDB 设置读取报错
+
+**现象**：首次打开页面时浏览器控制台报错：
+```
+Failed to load settings: NotFoundError: Failed to execute 'transaction' on 'IDBDatabase': One of the specified object stores was not found.
+```
+
+**原因**：`db/index.ts` 用 `idb-keyval` 管理 IndexedDB。`idb-keyval` 仅在 `set()` 调用时自动创建 object store，`get()` 调用在 store 不存在时会抛出 `NotFoundError`。首次访问时 `settings`/`notes`/`bookmarks` store 均未创建，导致 `loadSettings()` / `loadBookNotes()` 等初始化函数报错。
+
+**修复要求**：在应用初始化时确保所有 4 个 store（'books'、'notes'、'bookmarks'、'settings'）均已被创建。可以在 `db/index.ts` 添加 `initDatabase()` 函数，为每个 store 执行一次空 `set()`，在 App 启动时调用。或使用原生 IndexedDB `onupgradeneeded` 创建所有 object stores。
+
+## Bug 4：EPUB 图片嵌入未生效
+
+**现象**：导入带图片的 EPUB 文件后，章节内容中的图片无法显示（src 为空或只显示矩形占位）。
+
+**原因**：`parsers/epub.ts` 第 226-247 行的 `processHtmlContent()` 函数用 `forEach` 遍历图片并异步获取 Base64。但 `Array.prototype.forEach` **不等待** async 回调，因此图片嵌入操作在函数返回后仍未完成，返回的 HTML 字符串中图片 src 仍然是原始路径。
+
+**修复要求**：将 `forEach(img, async...)` 改为 `for...of` 循环，或使用 `Promise.all` + `map`，确保所有图片在 `processHtmlContent` 返回前完成 Base64 嵌入。
