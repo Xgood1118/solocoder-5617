@@ -77,6 +77,7 @@ export const Reader: React.FC = () => {
   const touchStartX = useRef<number>(0);
   const touchStartY = useRef<number>(0);
   const [animationClass, setAnimationClass] = useState<string>('');
+  const prevBookIdRef = useRef<string | null>(null);
   const { resetPageForBook, loadBookNotes, loadBookBookmarks } = {
     resetPageForBook: useReaderStore((s) => s.resetPageForBook),
     loadBookNotes: useNoteStore((s) => s.loadBookNotes),
@@ -89,13 +90,16 @@ export const Reader: React.FC = () => {
   );
 
   useEffect(() => {
-    if (!currentBook || !currentBookId) return;
-    const savedPage = currentBook.progress?.page;
-    const tp = currentBook.totalPages || currentBook.chapters.length;
+    if (!currentBookId || currentBookId === prevBookIdRef.current) return;
+    prevBookIdRef.current = currentBookId;
+    const book = books.find((b) => b.id === currentBookId);
+    if (!book) return;
+    const savedPage = book.progress?.page;
+    const tp = book.totalPages || book.chapters.length;
     resetPageForBook(tp, savedPage);
     loadBookNotes(currentBookId);
     loadBookBookmarks(currentBookId);
-  }, [currentBook, currentBookId, resetPageForBook, loadBookNotes, loadBookBookmarks]);
+  }, [currentBookId, books, resetPageForBook, loadBookNotes, loadBookBookmarks]);
 
   const currentChapter = useMemo<Chapter | undefined>(() => {
     if (!currentBook) return undefined;

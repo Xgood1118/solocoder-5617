@@ -6,7 +6,7 @@ import type { Note } from '../types';
 
 export const NotePanel: React.FC = () => {
   const { books, currentBookId } = useBookStore();
-  const { setPage, notesOpen, toggleNotes } = useReaderStore();
+  const { currentPage, setPage, notesOpen, toggleNotes } = useReaderStore();
   const { notes, selection, createNote, updateNote, deleteNote } = useNoteStore();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
@@ -66,7 +66,7 @@ export const NotePanel: React.FC = () => {
       noteText: newNoteText.trim(),
       startOffset: 0,
       endOffset: 0,
-      page: 1,
+      page: currentPage,
     });
     setNewNoteText('');
     setShowNewNote(false);
